@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { donorService } from '../../services/donorService';
 import { useAuth } from '../../context/AuthContext';
 import * as XLSX from 'xlsx';
-import { MagnifyingGlassIcon, PlusIcon, ArrowDownTrayIcon, CloudArrowUpIcon, UserPlusIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PlusIcon, ArrowDownTrayIcon, CloudArrowUpIcon, UserPlusIcon, PhoneIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 import ModernInput from '../../components/ui/ModernInput';
 import OutreachModal from '../../components/dashboard/OutreachModal';
+import EditDonorModal from '../../components/dashboard/EditDonorModal';
 
 export default function DonorsPage() {
     const { currentUser } = useAuth();
@@ -25,6 +26,9 @@ export default function DonorsPage() {
     const [formData, setFormData] = useState({
         name: '', bloodGroup: 'O+', location: '', contactNumber: '', email: '', lastDonation: ''
     });
+    const [countryCode, setCountryCode] = useState('+91');
+    const [editingDonor, setEditingDonor] = useState(null);
+    const [editModalOpen, setEditModalOpen] = useState(false);
     const [importPreview, setImportPreview] = useState([]);
 
     const isOrg = currentUser && ['hospital', 'blood_bank', 'ngo'].includes(currentUser.role);
@@ -72,7 +76,11 @@ export default function DonorsPage() {
         e.preventDefault();
         setStatus('processing');
         try {
-            await donorService.addDonor(formData);
+            const finalData = {
+                ...formData,
+                contactNumber: `${countryCode}${formData.contactNumber}`
+            };
+            await donorService.addDonor(finalData);
             setStatus('success');
             setMessage(`Successfully added donor: ${formData.name}`);
             setFormData({ name: '', bloodGroup: 'O+', location: '', contactNumber: '', email: '', lastDonation: '' });
@@ -232,129 +240,197 @@ export default function DonorsPage() {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <button
-                                                className="text-red-600 hover:text-red-900 text-sm font-medium"
-                                                onClick={() => { setSelectedDonor(person); setOutreachOpen(true); }}
-                                            >
-                                                Contact
-                                            </button>
+
+                                            <div className="flex items-center space-x-2">
+                                                <button
+                                                    className="text-red-600 hover:text-red-900 text-sm font-medium mr-2"
+                                                    onClick={() => { setSelectedDonor(person); setOutreachOpen(true); }}
+                                                >
+                                                    Contact
+                                                </button>
+                                                {isOrg && (
+                                                    <>
+                                                        <button
+                                                            className="text-gray-400 hover:text-blue-600"
+                                                            onClick={() => {
+                                                                setEditingDonor(person);
+                                                                setFormData({
+                                                                    name: person.name,
+                                                                    bloodGroup: person.bloodGroup,
+                                                                    location: person.location,
+                                                                    contactNumber: person.contactNumber ? person.contactNumber.replace(/^\+91/, '') : '', // Strip +91 for editing if present
+                                                                    email: person.email || '',
+                                                                    lastDonation: person.lastDonation || ''
+                                                                });
+                                                                // Extract country code if possible, default to +91 for now
+                                                                setEditModalOpen(true);
+                                                            }}
+                                                        >
+                                                            <PencilIcon className="h-5 w-5" />
+                                                        </button>
+                                                        <button
+                                                            className="text-gray-400 hover:text-red-600"
+                                                            onClick={async () => {
+                                                                if (window.confirm(`Are you sure you want to delete ${person.name}?`)) {
+                                                                    try {
+                                                                        await donorService.deleteDonor(person.id);
+                                                                        // Update local state
+                                                                        const updatedDonors = donors.filter(d => d.id !== person.id);
+                                                                        setDonors(updatedDonors);
+                                                                        // Re-run filter to update view
+                                                                        filterDonors(updatedDonors, query, bloodGroupFilter);
+                                                                    } catch (err) {
+                                                                        alert("Failed to delete donor");
+                                                                    }
+                                                                }
+                                                            }}
+                                                        >
+                                                            <TrashIcon className="h-5 w-5" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                     </li>
                                 ))
                             )}
                         </ul>
                     </div>
+                    </div>
                     <OutreachModal open={outreachOpen} setOpen={setOutreachOpen} donor={selectedDonor} />
+                    <EditDonorModal 
+                        open={editModalOpen} 
+                        setOpen={setEditModalOpen} 
+                        donor={editingDonor} 
+                        onUpdate={() => fetchDonors()} 
+                    />
                 </div>
-            )}
+    )
+}
 
-            {/* Content: Add Single */}
-            {activeTab === 'add' && isOrg && (
-                <div className="max-w-2xl mx-auto bg-white shadow sm:rounded-lg p-6">
-                    {message && <div className={`mb-4 p-3 rounded ${status === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{message}</div>}
-                    <form onSubmit={handleSingleSubmit} className="space-y-6">
-                        <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                            <div className="sm:col-span-3">
-                                <ModernInput
-                                    id="donorName"
-                                    label="Name"
-                                    required
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    icon={UserPlusIcon}
-                                />
-                            </div>
-                            <div className="sm:col-span-3">
-                                <div className="relative">
-                                    <select
-                                        value={formData.bloodGroup}
-                                        onChange={e => setFormData({ ...formData, bloodGroup: e.target.value })}
-                                        className="peer block w-full rounded-lg border-0 bg-transparent py-4 pl-4 pr-4 text-slate-900 ring-1 ring-inset ring-slate-200 focus:ring-2 focus:ring-inset focus:ring-rose-600 focus:outline-none sm:text-sm sm:leading-6 appearance-none transition-all duration-200"
-                                    >
-                                        {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
-                                    </select>
-                                    <label className="absolute left-2 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-slate-500 duration-300 pointer-events-none">
-                                        Blood Group
-                                    </label>
-                                </div>
-                            </div>
-                            <div className="sm:col-span-3">
-                                <ModernInput
-                                    id="contactNumber"
-                                    label="Contact Number"
-                                    required
-                                    value={formData.contactNumber}
-                                    onChange={e => setFormData({ ...formData, contactNumber: e.target.value })}
-                                    icon={PhoneIcon}
-                                />
-                            </div>
-                            <div className="sm:col-span-6">
-                                <ModernInput
-                                    id="location"
-                                    label="Location"
-                                    required
-                                    value={formData.location}
-                                    onChange={e => setFormData({ ...formData, location: e.target.value })}
-                                    icon={MagnifyingGlassIcon} // Using search icon for location context
-                                />
-                            </div>
+{/* Content: Add Single */ }
+{
+    activeTab === 'add' && isOrg && (
+        <div className="max-w-2xl mx-auto bg-white shadow sm:rounded-lg p-6">
+            {message && <div className={`mb-4 p-3 rounded ${status === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{message}</div>}
+            <form onSubmit={handleSingleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div className="sm:col-span-3">
+                        <ModernInput
+                            id="donorName"
+                            label="Name"
+                            required
+                            value={formData.name}
+                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                            icon={UserPlusIcon}
+                        />
+                    </div>
+                    <div className="sm:col-span-3">
+                        <div className="relative">
+                            <select
+                                value={formData.bloodGroup}
+                                onChange={e => setFormData({ ...formData, bloodGroup: e.target.value })}
+                                className="peer block w-full rounded-lg border-0 bg-transparent py-4 pl-4 pr-4 text-slate-900 ring-1 ring-inset ring-slate-200 focus:ring-2 focus:ring-inset focus:ring-rose-600 focus:outline-none sm:text-sm sm:leading-6 appearance-none transition-all duration-200"
+                            >
+                                {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                            </select>
+                            <label className="absolute left-2 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-slate-500 duration-300 pointer-events-none">
+                                Blood Group
+                            </label>
                         </div>
-                        <div className="flex justify-end">
-                            <button type="submit" disabled={status === 'processing'} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50">
-                                <PlusIcon className="-ml-1 mr-2 h-5 w-5" /> {status === 'processing' ? 'Adding...' : 'Add Donor'}
-                            </button>
+                    </div>
+                    <div className="sm:col-span-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+                        <div className="flex">
+                            <select
+                                value={countryCode}
+                                onChange={(e) => setCountryCode(e.target.value)}
+                                className="rounded-l-lg border-gray-300 border-r-0 focus:ring-rose-500 focus:border-rose-500 py-3 pl-3 pr-8 bg-gray-50 text-gray-500 sm:text-sm"
+                            >
+                                <option value="+91">+91 (IN)</option>
+                                <option value="+1">+1 (US)</option>
+                                <option value="+44">+44 (UK)</option>
+                            </select>
+                            <input
+                                type="tel"
+                                required
+                                className="block w-full rounded-r-lg border-gray-300 focus:ring-rose-500 focus:border-rose-500 sm:text-sm py-3 px-4"
+                                placeholder="9876543210"
+                                value={formData.contactNumber}
+                                onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                            />
                         </div>
-                    </form>
+                    </div>
+                    <div className="sm:col-span-6">
+                        <ModernInput
+                            id="location"
+                            label="Location"
+                            required
+                            value={formData.location}
+                            onChange={e => setFormData({ ...formData, location: e.target.value })}
+                            icon={MagnifyingGlassIcon} // Using search icon for location context
+                        />
+                    </div>
                 </div>
-            )}
+                <div className="flex justify-end">
+                    <button type="submit" disabled={status === 'processing'} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50">
+                        <PlusIcon className="-ml-1 mr-2 h-5 w-5" /> {status === 'processing' ? 'Adding...' : 'Add Donor'}
+                    </button>
+                </div>
+            </form>
+        </div>
+    )
+}
 
-            {/* Content: Bulk Import */}
-            {activeTab === 'bulk' && isOrg && (
-                <div className="max-w-2xl mx-auto bg-white shadow sm:rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-medium leading-6 text-gray-900">Upload Excel File</h3>
-                        <button type="button" onClick={downloadTemplate} className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                            <ArrowDownTrayIcon className="-ml-0.5 mr-2 h-4 w-4" /> Template
+{/* Content: Bulk Import */ }
+{
+    activeTab === 'bulk' && isOrg && (
+        <div className="max-w-2xl mx-auto bg-white shadow sm:rounded-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-medium leading-6 text-gray-900">Upload Excel File</h3>
+                <button type="button" onClick={downloadTemplate} className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    <ArrowDownTrayIcon className="-ml-0.5 mr-2 h-4 w-4" /> Template
+                </button>
+            </div>
+            {message && <div className={`mb-4 p-3 rounded ${status === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{message}</div>}
+
+            <div className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                <div className="space-y-1 text-center">
+                    <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <div className="flex text-sm text-gray-600">
+                        <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-red-600 hover:text-red-500">
+                            <span>Upload a file</span>
+                            <input id="file-upload" name="file-upload" type="file" className="sr-only" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} />
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            {importPreview.length > 0 && (
+                <div className="mt-6">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Preview ({importPreview.length} records)</h4>
+                    <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50 sticky top-0">
+                                <tr>{Object.keys(importPreview[0]).map(k => <th key={k} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{k}</th>)}</tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {importPreview.slice(0, 5).map((row, i) => (
+                                    <tr key={i}>{Object.values(row).map((v, j) => <td key={j} className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{v}</td>)}</tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                        <button onClick={handleBulkImport} disabled={status === 'processing'} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50">
+                            {status === 'processing' ? 'Importing...' : 'Import All'}
                         </button>
                     </div>
-                    {message && <div className={`mb-4 p-3 rounded ${status === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{message}</div>}
-
-                    <div className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                        <div className="space-y-1 text-center">
-                            <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
-                            <div className="flex text-sm text-gray-600">
-                                <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-red-600 hover:text-red-500">
-                                    <span>Upload a file</span>
-                                    <input id="file-upload" name="file-upload" type="file" className="sr-only" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} />
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    {importPreview.length > 0 && (
-                        <div className="mt-6">
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">Preview ({importPreview.length} records)</h4>
-                            <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50 sticky top-0">
-                                        <tr>{Object.keys(importPreview[0]).map(k => <th key={k} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{k}</th>)}</tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {importPreview.slice(0, 5).map((row, i) => (
-                                            <tr key={i}>{Object.values(row).map((v, j) => <td key={j} className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{v}</td>)}</tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="mt-4 flex justify-end">
-                                <button onClick={handleBulkImport} disabled={status === 'processing'} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50">
-                                    {status === 'processing' ? 'Importing...' : 'Import All'}
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
         </div>
+    )
+}
+        </div >
     );
 }

@@ -3,7 +3,8 @@ import { collection, addDoc, updateDoc, doc, onSnapshot, query, where, orderBy, 
 
 // Placeholder n8n Webhook URL - User needs to replace this
 // PRO TIP: 'webhook-test' is for testing while the n8n editor is open. Change to 'webhook' for production.
-const N8N_WEBHOOK_URL = 'http://localhost:4747/webhook-test/blood-request';
+// PRO TIP: 'webhook-test' is for testing while the n8n editor is open. Change to 'webhook' for production.
+const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/blood-request';
 
 // Mock simulation steps (Fallback if n8n is not reachable)
 const WORKFLOW_STEPS = [

@@ -1,5 +1,5 @@
 import { db } from '../lib/firebase';
-import { collection, addDoc, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, updateDoc, doc, query, where, orderBy, limit } from 'firebase/firestore';
 
 const COLLECTION_NAME = 'donors';
 
@@ -15,6 +15,29 @@ export const donorService = {
             return docRef.id;
         } catch (error) {
             console.error("Error adding donor:", error);
+            throw error;
+        }
+    },
+
+    // Delete a donor
+    async deleteDonor(donorId) {
+        try {
+            await deleteDoc(doc(db, COLLECTION_NAME, donorId));
+            return true;
+        } catch (error) {
+            console.error("Error deleting donor:", error);
+            throw error;
+        }
+    },
+
+    // Update a donor
+    async updateDonor(donorId, updatedData) {
+        try {
+            const donorRef = doc(db, COLLECTION_NAME, donorId);
+            await updateDoc(donorRef, updatedData);
+            return true;
+        } catch (error) {
+            console.error("Error updating donor:", error);
             throw error;
         }
     },
