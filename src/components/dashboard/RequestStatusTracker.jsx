@@ -21,14 +21,14 @@ export default function RequestStatusTracker({ status, compact = false }) {
     };
 
     return (
-        <div className={`w-full ${compact ? 'py-1' : 'py-6'}`}>
+        <div className={`w-full ${compact ? 'py-1' : 'py-8 px-2'}`}>
             <div className="relative">
                 {/* Connection Line Background */}
-                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 rounded-full" />
+                <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2 rounded-full" />
 
-                {/* Active Progress Line */}
+                {/* Active Progress Line with Glow */}
                 <div
-                    className="absolute top-1/2 left-0 h-0.5 bg-red-500 -translate-y-1/2 transition-all duration-1000 ease-in-out rounded-full shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                    className="absolute top-1/2 left-0 h-1 bg-rose-500 -translate-y-1/2 transition-all duration-1000 ease-in-out rounded-full shadow-[0_0_12px_rgba(244,63,94,0.4)]"
                     style={{
                         width: `${(Math.max(0, currentStepIndex) / (STEPS.length - 1)) * 100}%`
                     }}
@@ -44,29 +44,33 @@ export default function RequestStatusTracker({ status, compact = false }) {
                                 {/* Point/Dot */}
                                 <div
                                     className={`relative z-10 flex items-center justify-center transition-all duration-500 rounded-full border-2 
-                                        ${compact ? 'h-3 w-3' : 'h-6 w-6 sm:h-8 sm:w-8'} 
-                                        ${state === 'complete' ? 'bg-red-500 border-red-500 shadow-sm' :
-                                            state === 'current' ? 'bg-white border-red-500 animate-pulse-slow' :
-                                                'bg-white border-gray-200'}`}
+                                        ${compact ? 'h-3.5 w-3.5' : 'h-7 w-7 sm:h-9 sm:w-9'} 
+                                        ${state === 'complete' ? 'bg-rose-500 border-rose-500 shadow-lg shadow-rose-200' :
+                                            state === 'current' ? 'bg-white border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse-slow' :
+                                                'bg-white border-slate-200'}`}
                                 >
                                     {state === 'complete' && !compact && (
                                         <CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                                     )}
                                     {state === 'current' && !compact && (
-                                        <div className="h-2 w-2 sm:h-3 sm:w-3 bg-red-500 rounded-full animate-ping" />
+                                        <div className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 bg-rose-600 rounded-full animate-pulse" />
+                                    )}
+                                    {state === 'complete' && compact && (
+                                        <div className="h-1.5 w-1.5 bg-white rounded-full" />
                                     )}
                                 </div>
 
-                                {/* Label - Only show if not compact or if it's the current/first/last step for clarity */}
+                                {/* Label - Smart visibility */}
                                 {!compact && (
-                                    <span className={`absolute top-full mt-2 text-[10px] sm:text-xs font-bold tracking-tight whitespace-nowrap transition-colors duration-300
-                                        ${state === 'upcoming' ? 'text-gray-400' : 'text-slate-800'}`}>
+                                    <span className={`absolute top-full mt-3 text-[9px] sm:text-xs font-bold tracking-tight text-center transition-all duration-300
+                                        ${idx === 0 ? 'left-0 translate-x-0' : idx === STEPS.length - 1 ? 'right-0 translate-x-0' : 'left-1/2 -translate-x-1/2'}
+                                        ${state === 'upcoming' ? 'text-slate-300' : 'text-slate-700'}`}>
                                         {step.label}
                                     </span>
                                 )}
                                 {compact && state === 'current' && (
-                                    <span className="absolute top-full mt-1 text-[8px] font-black text-red-600 uppercase tracking-tighter whitespace-nowrap">
-                                        {step.id}
+                                    <span className="absolute top-full mt-1.5 text-[8px] font-black text-rose-600 uppercase tracking-tighter whitespace-nowrap bg-rose-50 px-1 rounded">
+                                        {step.label.split(' ')[0]}
                                     </span>
                                 )}
                             </li>
@@ -74,7 +78,7 @@ export default function RequestStatusTracker({ status, compact = false }) {
                     })}
                 </ul>
             </div>
-            {!compact && <div className="h-6" />} {/* Bottom padding for full labels */}
+            {!compact && <div className="h-6" />}
         </div>
     );
 }
