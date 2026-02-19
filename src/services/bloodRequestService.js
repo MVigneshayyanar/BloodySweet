@@ -4,7 +4,7 @@ import { collection, addDoc, updateDoc, doc, onSnapshot, query, where, orderBy, 
 // Placeholder n8n Webhook URL - User needs to replace this
 // PRO TIP: 'webhook-test' is for testing while the n8n editor is open. Change to 'webhook' for production.
 // PRO TIP: 'webhook-test' is for testing while the n8n editor is open. Change to 'webhook' for production.
-const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/blood-request';
+const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL || 'https://vigneshinr.app.n8n.cloud/webhook/blood-request';
 
 // Mock simulation steps (Fallback if n8n is not reachable)
 const WORKFLOW_STEPS = [
@@ -38,11 +38,8 @@ export const bloodRequestService = {
 
     // Trigger n8n Automation
     async triggerN8nWorkflow(requestId, requestData) {
-        if (N8N_WEBHOOK_URL.includes('your-n8n-instance.com')) {
-            console.warn("⚠️ n8n Webhook URL is still the placeholder. Falling back to simulation. Please update src/services/bloodRequestService.js with your actual URL.");
-            this.simulateWorkflow(requestId);
-            return;
-        }
+        // Removed placeholder check strictly to allow the new cloud URL to fire.
+
 
         try {
             console.log(`Triggering n8n for request ${requestId}...`);
