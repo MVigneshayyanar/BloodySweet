@@ -134,7 +134,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
             </Transition.Root>
 
             {/* Desktop Sidebar (hidden on mobile) */}
-            <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
+            <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-56 lg:flex-col">
                 <NavContent />
             </div>
         </>

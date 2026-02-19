@@ -8,56 +8,76 @@ const STEPS = [
     { id: 'secured', label: 'Donor Secured' }
 ];
 
-export default function RequestStatusTracker({ status }) {
+export default function RequestStatusTracker({ status, compact = false }) {
     // Determine current step index based on status
     const currentStepIndex = STEPS.findIndex(s => s.id === status);
     const isCompleted = status === 'secured';
 
+    // Helper to get step state
+    const getStepState = (idx) => {
+        if (isCompleted || idx < currentStepIndex) return 'complete';
+        if (idx === currentStepIndex) return 'current';
+        return 'upcoming';
+    };
+
     return (
-        <div className="w-full py-4">
-            <nav aria-label="Progress">
-                <ol role="list" className="flex items-center">
-                    {STEPS.map((step, stepIdx) => {
-                        const isComplete = stepIdx < currentStepIndex || isCompleted;
-                        const isCurrent = stepIdx === currentStepIndex && !isCompleted;
+        <div className={`w-full ${compact ? 'py-1' : 'py-6'}`}>
+            <div className="relative">
+                {/* Connection Line Background */}
+                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 rounded-full" />
+
+                {/* Active Progress Line */}
+                <div
+                    className="absolute top-1/2 left-0 h-0.5 bg-red-500 -translate-y-1/2 transition-all duration-1000 ease-in-out rounded-full shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                    style={{
+                        width: `${(Math.max(0, currentStepIndex) / (STEPS.length - 1)) * 100}%`
+                    }}
+                />
+
+                {/* Points */}
+                <ul className="relative flex items-center justify-between w-full">
+                    {STEPS.map((step, idx) => {
+                        const state = getStepState(idx);
 
                         return (
-                            <li key={step.label} className={`${stepIdx !== STEPS.length - 1 ? 'pr-8 sm:pr-20' : ''} relative`}>
-                                {stepIdx !== STEPS.length - 1 && (
-                                    <div className="absolute top-4 left-0 -right-8 sm:-right-20 h-0.5 w-full" aria-hidden="true">
-                                        <div
-                                            className={`h-full transition-all duration-500 ease-in-out ${isComplete ? 'bg-red-600' : 'bg-gray-200'
-                                                }`}
-                                        />
-                                    </div>
-                                )}
+                            <li key={step.id} className="relative flex flex-col items-center">
+                                {/* Point/Dot */}
+                                <div
+                                    className={`relative z-10 flex items-center justify-center transition-all duration-500 rounded-full border-2 
+                                        ${compact ? 'h-3 w-3' : 'h-6 w-6 sm:h-8 sm:w-8'} 
+                                        ${state === 'complete' ? 'bg-red-500 border-red-500 shadow-sm' :
+                                            state === 'current' ? 'bg-white border-red-500 animate-pulse-slow' :
+                                                'bg-white border-gray-200'}`}
+                                >
+                                    {state === 'complete' && !compact && (
+                                        <CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                                    )}
+                                    {state === 'current' && !compact && (
+                                        <div className="h-2 w-2 sm:h-3 sm:w-3 bg-red-500 rounded-full animate-ping" />
+                                    )}
+                                </div>
 
-                                <div className="group relative flex flex-col items-center justify-center">
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white transition duration-500">
-                                        {isComplete ? (
-                                            <CheckCircleIcon className="h-full w-full text-red-600" aria-hidden="true" />
-                                        ) : isCurrent ? (
-                                            <span className="relative flex h-8 w-8">
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                <span className="relative inline-flex rounded-full h-8 w-8 bg-red-600 items-center justify-center">
-                                                    <ClockIcon className="h-5 w-5 text-white animate-pulse" />
-                                                </span>
-                                            </span>
-                                        ) : (
-                                            <div className="h-4 w-4 rounded-full bg-gray-200 ring-1 ring-gray-300" />
-                                        )}
-                                    </span>
-                                    <span className={`absolute top-10 w-32 text-center text-xs font-medium ${isCurrent ? 'text-red-600' : isComplete ? 'text-gray-900' : 'text-gray-500'
-                                        }`}>
+                                {/* Label - Only show if not compact or if it's the current/first/last step for clarity */}
+                                {!compact && (
+                                    <span className={`absolute top-full mt-2 text-[10px] sm:text-xs font-bold tracking-tight whitespace-nowrap transition-colors duration-300
+                                        ${state === 'upcoming' ? 'text-gray-400' : 'text-slate-800'}`}>
                                         {step.label}
                                     </span>
-                                </div>
+                                )}
+                                {compact && state === 'current' && (
+                                    <span className="absolute top-full mt-1 text-[8px] font-black text-red-600 uppercase tracking-tighter whitespace-nowrap">
+                                        {step.id}
+                                    </span>
+                                )}
                             </li>
                         );
                     })}
-                </ol>
-            </nav>
-            <div className="h-8"></div> {/* Spacer for labels */}
+                </ul>
+            </div>
+            {!compact && <div className="h-6" />} {/* Bottom padding for full labels */}
         </div>
     );
 }
+
+// Add these to your CSS or use Tailwind's arbitrary values
+// animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
