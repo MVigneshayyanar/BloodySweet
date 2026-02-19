@@ -193,7 +193,7 @@ export default function DonorsPage() {
 
             {/* Content: Find Donors */}
             {activeTab === 'find' && (
-                <div>
+                <>
                     <div className="mt-4 flex flex-col sm:flex-row gap-4 mb-6">
                         <div className="relative rounded-md shadow-sm grow">
                             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -258,11 +258,10 @@ export default function DonorsPage() {
                                                                     name: person.name,
                                                                     bloodGroup: person.bloodGroup,
                                                                     location: person.location,
-                                                                    contactNumber: person.contactNumber ? person.contactNumber.replace(/^\+91/, '') : '', // Strip +91 for editing if present
+                                                                    contactNumber: person.contactNumber ? person.contactNumber.replace(/^\+91/, '') : '',
                                                                     email: person.email || '',
                                                                     lastDonation: person.lastDonation || ''
                                                                 });
-                                                                // Extract country code if possible, default to +91 for now
                                                                 setEditModalOpen(true);
                                                             }}
                                                         >
@@ -274,10 +273,8 @@ export default function DonorsPage() {
                                                                 if (window.confirm(`Are you sure you want to delete ${person.name}?`)) {
                                                                     try {
                                                                         await donorService.deleteDonor(person.id);
-                                                                        // Update local state
                                                                         const updatedDonors = donors.filter(d => d.id !== person.id);
                                                                         setDonors(updatedDonors);
-                                                                        // Re-run filter to update view
                                                                         filterDonors(updatedDonors, query, bloodGroupFilter);
                                                                     } catch (err) {
                                                                         alert("Failed to delete donor");
@@ -304,9 +301,8 @@ export default function DonorsPage() {
                         donor={editingDonor}
                         onUpdate={() => fetchDonors()}
                     />
-                </div>
-            )
-            }
+                </>
+            )}
 
             {/* Content: Add Single */}
             {
